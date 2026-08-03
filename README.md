@@ -2,14 +2,14 @@
 
 Web responsif untuk membaca Al-Qur'an: teks Arab mode **mushaf**, transliterasi
 latin, terjemahan Kemenag, tafsir per-ayat, audio murottal (5 pilihan qari),
-navigasi per Surah & per Juz, bookmark, dan "terakhir dibaca" — semuanya
+navigasi per Surah & per Juz, bookmark, dan "terakhir dibaca" hingga semuanya
 tersimpan di perangkat pengguna (localStorage), **tanpa database/backend**.
 
 ## Stack
 
 - HTML + CSS + JavaScript murni (vanilla)
 - [Tailwind CSS](https://tailwindcss.com) via CDN (Play CDN)
-- [Alpine.js](https://alpinejs.dev) via CDN — state & interaktivitas
+- [Alpine.js](https://alpinejs.dev) via CDN, state & interaktivitas
 - Data Al-Qur'an dari API publik **[EQuran.id](https://equran.id)**
 - PWA (bisa dipasang & dibuka offline untuk surah yang pernah dibuka)
 
@@ -34,7 +34,7 @@ ayatify/
 
 ---
 
-## 1. Menjalankan di VSCode (lokal)
+## Menjalankan di lokal
 
 Karena `fetch()` ke API dan Service Worker butuh diakses lewat `http://`
 (bukan `file://`), buka project ini lewat **live server**, bukan cukup
@@ -72,37 +72,3 @@ Lalu buka `http://localhost:5500` di browser.
 > atau domain HTTPS — ini normal dan sesuai standar browser, bukan bug.
 
 ---
-
-## 2. Deploy ke Netlify
-
-### Cara termudah — Drag & Drop (tanpa Git)
-
-1. Buka https://app.netlify.com dan login/daftar (gratis)
-2. Di dashboard, klik **"Add new site" → "Deploy manually"**
-3. **Drag & drop seluruh folder `ayatify`** (isi foldernya, bukan file zip) ke area upload
-4. Tunggu beberapa detik — Netlify otomatis memberi URL seperti `random-name-123.netlify.app`
-5. Selesai! Web sudah live dan bisa diakses siapa saja, lengkap dengan HTTPS (jadi PWA & Service Worker langsung berfungsi)
-
-### Cara lain — Lewat Git (auto-deploy tiap kali push)
-
-1. Push folder `ayatify` ini ke repository GitHub kamu
-2. Di Netlify dashboard: **"Add new site" → "Import an existing project"**
-3. Hubungkan akun GitHub, pilih repository-nya
-4. Pada pengaturan build:
-   - **Build command**: kosongkan (tidak perlu, karena tidak ada proses build)
-   - **Publish directory**: `.` (folder root, atau sesuaikan jika `ayatify` ada di sub-folder repo)
-5. Klik **Deploy site**
-
-### Setelah deploy
-
-- Ganti nama domain default lewat **Site settings → Change site name** jika mau URL yang lebih rapi, misalnya `ayatify.netlify.app`
-- Domain kustom (misal `ayatify.com`) bisa dihubungkan lewat **Domain settings → Add a domain**
-
----
-
-## Catatan penting
-
-- **Tidak ada API key** yang perlu diatur — API EQuran.id bersifat publik dan gratis.
-- **Tidak ada database**: bookmark, terakhir dibaca, dan pengaturan tema/ukuran huruf/qari semuanya tersimpan di `localStorage` browser pengguna masing-masing. Jika pengguna membersihkan data browser, data tersebut akan hilang.
-- **Fitur Jadwal Sholat** sengaja dikunci (ikon gembok) karena masih dalam pengembangan, sesuai permintaan — tinggal dikembangkan lagi nanti di file `js/app.js` dan ditambahkan section baru di `index.html`.
-- Untuk mengganti/menambah palet warna, cari class Tailwind seperti `blue-600`, `lime-500` (tema terang) dan `cyan-400`, `green-500` (tema gelap) di `index.html` — sengaja dipakai langsung dari palet Tailwind, bukan lewat `tailwind.config`, supaya mudah dicari & diganti.
