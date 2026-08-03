@@ -68,7 +68,4 @@ npx serve . -l 5500
 
 Lalu buka `http://localhost:5500` di browser.
 
-> **Catatan:** Service Worker (fitur offline PWA) hanya aktif di `localhost`
-> atau domain HTTPS — ini normal dan sesuai standar browser, bukan bug.
-
 ---
