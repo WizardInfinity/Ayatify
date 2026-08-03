@@ -13,25 +13,6 @@ tersimpan di perangkat pengguna (localStorage), **tanpa database/backend**.
 - Data Al-Qur'an dari API publik **[EQuran.id](https://equran.id)**
 - PWA (bisa dipasang & dibuka offline untuk surah yang pernah dibuka)
 
-## Struktur folder
-
-```
-ayatify/
-├── index.html          # Seluruh halaman (SPA) ada di sini
-├── manifest.json        # Konfigurasi PWA
-├── sw.js                 # Service worker (cache offline)
-├── css/
-│   └── style.css         # Gaya kustom (font Arab, mode mushaf, dll)
-├── js/
-│   ├── juz-data.js       # Data batas 30 Juz (statis)
-│   ├── api.js             # Semua pemanggilan ke API EQuran.id
-│   ├── store.js           # Simpan/baca bookmark, last read, pengaturan
-│   └── app.js              # Logika utama Alpine.js (state & routing)
-└── icons/
-    ├── icon-192.png
-    └── icon-512.png
-```
-
 ---
 
 ## Menjalankan di lokal
@@ -52,7 +33,7 @@ klik dua kali `index.html`.
    - Klik kanan pada `index.html` di panel Explorer → **"Open with Live Server"**
    - Atau klik tombol **"Go Live"** di pojok kanan bawah VSCode
    - Browser otomatis terbuka di alamat seperti `http://127.0.0.1:5500`
-5. Selesai — web sudah bisa dipakai. Setiap kamu simpan perubahan file, browser akan otomatis reload.
+5. Selesai.
 
 ### Alternatif tanpa ekstensi (pakai terminal)
 
