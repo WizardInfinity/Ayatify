@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Ayatify — Baca Al-Qur'an Online</title>
+  <meta name="description" content="Ayatify: baca Al-Qur'an online lengkap dengan terjemahan, tafsir, dan audio murottal dari beberapa qari. Ringan, responsif, dan bisa dipakai offline." />
+  <meta name="theme-color" content="#2563eb" />
+
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" href="./icons/logo.png" />
+  <link rel="apple-touch-icon" href="./icons/logo.png" />
+
+  <!-- Font: Plus Jakarta Sans & Inter untuk UI, Amiri Quran untuk teks Arab mushaf -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS (Play CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: "class" };
+  </script>
+
+  <link rel="stylesheet" href="./css/style.css" />
+
+  <!-- Data & logika aplikasi -->
+  <script src="./js/juz-data.js"></script>
+  <script src="./js/api.js"></script>
+  <script src="./js/store.js"></script>
+  <script src="./js/app.js"></script>
+  <!-- Alpine.js (defer, dimuat paling akhir sesuai anjuran resminya) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body
+  x-data="ayatifyApp()"
+  x-init="init()"
+  class="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors duration-200"
+>
+  <a href="#konten-utama" class="skip-link">Lompat ke konten utama</a>
+
+  <!-- ============ Banner offline ============ -->
+  <div
+    x-show="!isOnline"
+    x-transition
+    class="bg-amber-500 text-white text-sm text-center py-1.5 px-4"
+    style="display:none"
+  >
+    Kamu sedang offline — hanya surah yang pernah dibuka sebelumnya yang bisa diakses.
+  </div>
+
+  <!-- ============ Header ============ -->
+  <header class="sticky top-0 z-30 bg-white/90 dark:bg-slate-900/90 backdrop-blur border-b border-slate-200 dark:border-slate-800">
+    <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between gap-3">
+      <button @click="goTo('')" class="flex items-center gap-2 font-display font-extrabold text-xl text-blue-600 dark:text-cyan-400">
+        <img src="./icons/logo.png" width="30" alt="">
+        Ayatify
+      </button>
+
+      <nav class="hidden md:flex items-center gap-1 text-sm font-medium">
+        <button @click="goTo('')" class="px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800" :class="page==='home' && 'text-blue-600 dark:text-cyan-400'">Beranda</button>
+        <button @click="goTo('bookmark')" class="px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800" :class="page==='bookmark' && 'text-blue-600 dark:text-cyan-400'">Bookmark</button>
+        <button @click="showToast('Fitur jadwal sholat sedang dalam pengembangan, segera hadir!')" class="px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 inline-flex items-center gap-1 text-slate-400 dark:text-slate-500">
+          Jadwal Sholat
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 1 1 8 0v3"/></svg>
+        </button>
+        <button @click="goTo('pengaturan')" class="px-3 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800" :class="page==='settings' && 'text-blue-600 dark:text-cyan-400'">Pengaturan</button>
+      </nav>
+
+      <div class="flex items-center gap-1.5">
+        <button
+          x-show="deferredInstallPrompt"
+          @click="installApp()"
+          class="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-lime-500 dark:bg-green-500 text-white hover:opacity-90"
+          style="display:none"
+        >
+          Pasang App
+        </button>
+        <button
+          @click="setTheme(settings.theme === 'system' ? 'light' : settings.theme === 'light' ? 'dark' : 'system')"
+          class="w-10 h-10 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300"
+          :title="'Tema: ' + settings.theme"
+        >
+          <svg x-show="settings.theme==='light'" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+          <svg x-show="settings.theme==='dark'" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg>
+          <svg x-show="settings.theme==='system'" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ Konten utama ============ -->
+  <main id="konten-utama" class="flex-1 w-full max-w-4xl mx-auto px-4 py-5 pb-28 md:pb-16">
+
+    <!-- Error -->
+    <div x-show="error && page==='home'" x-cloak class="mb-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 px-4 py-3 text-sm flex items-center justify-between gap-3">
+      <span x-text="error"></span>
+      <button @click="loadSurahList()" class="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-600 text-white hover:opacity-90">Coba Lagi</button>
+    </div>
+
+    <!-- ================= HALAMAN: BERANDA ================= -->
+    <section x-show="page==='home'" x-cloak x-data="{ tab: 'surah' }" class="fade-in">
+
+      <!-- Kartu terakhir dibaca -->
+      <button
+        x-show="lastRead"
+        @click="continueLastRead()"
+        class="w-full mb-5 text-left rounded-2xl p-4 bg-gradient-to-r from-blue-600 to-lime-500 dark:from-cyan-500 dark:to-green-500 text-white flex items-center justify-between gap-3 shadow-sm hover:opacity-95"
+        style="display:none"
+      >
+        <div>
+          <p class="text-xs uppercase tracking-wide opacity-90">Lanjutkan membaca</p>
+          <p class="font-display font-bold text-lg" x-text="lastRead && (lastRead.surahNama + ' — Ayat ' + lastRead.ayatNomor)"></p>
+        </div>
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+
+      <!-- Tab Surah / Juz -->
+      <div class="inline-flex p-1 rounded-xl bg-slate-100 dark:bg-slate-800 mb-4">
+        <button @click="tab='surah'" class="px-4 py-1.5 rounded-lg text-sm font-semibold transition" :class="tab==='surah' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-cyan-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'">Surah</button>
+        <button @click="tab='juz'" class="px-4 py-1.5 rounded-lg text-sm font-semibold transition" :class="tab==='juz' ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-cyan-400 shadow-sm' : 'text-slate-500 dark:text-slate-400'">Juz</button>
+      </div>
+
+      <!-- Pencarian surah -->
+      <div x-show="tab==='surah'" class="relative mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input
+          type="text"
+          x-model="searchQuery"
+          placeholder="Cari nama surah, arti, atau nomor…"
+          class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-cyan-400"
+        />
+      </div>
+
+      <!-- Daftar surah -->
+      <div x-show="tab==='surah'" class="grid sm:grid-cols-2 gap-3">
+        <template x-for="s in filteredSurahList" :key="s.nomor">
+          <button @click="goTo('surah/' + s.nomor)" class="text-left rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/60 p-4 hover:border-blue-400 dark:hover:border-cyan-400 hover:shadow-sm transition flex items-start gap-3">
+            <span class="shrink-0 w-9 h-9 rounded-lg bg-blue-50 dark:bg-cyan-500/10 text-blue-600 dark:text-cyan-400 font-display font-bold text-sm flex items-center justify-center" x-text="s.nomor"></span>
+            <span class="flex-1 min-w-0">
+              <span class="flex items-center justify-between gap-2">
+                <span class="font-display font-semibold text-sm truncate" x-text="s.namaLatin"></span>
+                <span class="font-arabic text-lg text-blue-600 dark:text-cyan-400" x-text="s.nama"></span>
+              </span>
+              <span class="block text-xs text-slate-500 dark:text-slate-400 mt-0.5" x-text="s.arti + ' · ' + s.jumlahAyat + ' ayat · ' + (s.tempatTurun === 'mekah' ? 'Makkiyah' : 'Madaniyah')"></span>
+            </span>
+          </button>
+        </template>
+        <p x-show="filteredSurahList.length===0" class="col-span-2 text-center text-sm text-slate-400 py-8">Surah tidak ditemukan.</p>
+      </div>
+
+      <!-- Daftar juz -->
+      <div x-show="tab==='juz'" x-cloak class="grid grid-cols-3 sm:grid-cols-5 gap-3">
+        <template x-for="n in juzNumbers" :key="n">
+          <button @click="goTo('juz/' + n)" class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/60 py-4 hover:border-blue-400 dark:hover:border-cyan-400 hover:shadow-sm transition text-center">
+            <span class="block text-xs text-slate-400 mb-0.5">Juz</span>
+            <span class="block font-display font-bold text-xl text-blue-600 dark:text-cyan-400" x-text="n"></span>
+          </button>
+        </template>
+      </div>
+    </section>
+
+    <!-- ================= HALAMAN: SURAH (mode mushaf) ================= -->
+    <section x-show="page==='surah'" x-cloak class="fade-in">
+      <button @click="goTo('')" class="inline-flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-cyan-400 mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 6-6 6 6 6"/></svg>
+        Kembali ke daftar surah
+      </button>
+
+      <div x-show="error && !loadingSurah" x-cloak class="mb-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 px-4 py-3 text-sm flex items-center justify-between gap-3">
+        <span x-text="error"></span>
+        <button @click="retryOpenSurah()" class="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-600 text-white hover:opacity-90">Coba Lagi</button>
+      </div>
+
+      <template x-if="currentSurah && !loadingSurah">
+        <div>
+          <!-- Kepala surah -->
+          <div class="surah-header-frame rounded-2xl p-5 text-center mb-5">
+            <p class="font-arabic text-4xl text-blue-700 dark:text-cyan-300 mb-1" x-text="currentSurah.nama"></p>
+            <p class="font-display font-bold text-lg" x-text="currentSurah.namaLatin + ' — ' + currentSurah.arti"></p>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1" x-text="(currentSurah.tempatTurun === 'mekah' ? 'Makkiyah' : 'Madaniyah') + ' · ' + currentSurah.jumlahAyat + ' ayat'"></p>
+          </div>
+
+          <!-- Cari ayat dalam surah -->
+          <div class="relative mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="text" x-model="inSurahQuery" placeholder="Cari nomor ayat atau kata dalam surah ini…" class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-cyan-400" />
+          </div>
+
+          <!-- Bismillah (kecuali Al-Fatihah & At-Taubah) -->
+          <p x-show="currentSurah.nomor !== 1 && currentSurah.nomor !== 9" class="font-arabic text-3xl text-center text-blue-700 dark:text-cyan-300 mb-5">
+            بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+          </p>
+
+          <!-- Teks mushaf mengalir -->
+          <div class="mushaf-flow font-arabic rounded-2xl bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 p-5 mb-6" :class="arabicSizeClass">
+            <template x-for="a in filteredSurahAyat" :key="a.nomorAyat">
+              <span
+                :id="'ayat-' + a.nomorAyat"
+                class="ayat-chunk"
+                :class="isAyatActive(currentSurah.nomor, a.nomorAyat) && 'is-active'"
+                @click="toggleAyatDetail(currentSurah.nomor, a.nomorAyat)"
+              ><span x-text="a.teksArab"></span><span class="ayah-marker" x-text="a.nomorAyat"></span></span>
+            </template>
+          </div>
+        </div>
+      </template>
+    </section>
+
+    <!-- ================= HALAMAN: JUZ (mode mushaf, gabungan surah) ================= -->
+    <section x-show="page==='juz'" x-cloak class="fade-in">
+      <button @click="goTo('')" class="inline-flex items-center gap-1 text-sm text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-cyan-400 mb-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 6-6 6 6 6"/></svg>
+        Kembali
+      </button>
+      <h1 class="font-display font-bold text-2xl mb-5">Juz <span x-text="currentJuzNumber"></span></h1>
+
+      <div x-show="error && !loadingJuz" x-cloak class="mb-4 rounded-xl bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 px-4 py-3 text-sm flex items-center justify-between gap-3">
+        <span x-text="error"></span>
+        <button @click="retryOpenJuz()" class="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-600 text-white hover:opacity-90">Coba Lagi</button>
+      </div>
+
+      <template x-for="part in currentJuzParts" :key="part.nomor">
+        <div class="mb-6">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 dark:bg-cyan-500/10 text-blue-600 dark:text-cyan-400" x-text="'QS ' + part.namaLatin"></span>
+          </div>
+          <div class="mushaf-flow font-arabic rounded-2xl bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 p-5" :class="arabicSizeClass">
+            <template x-for="a in part.ayat" :key="part.nomor + '-' + a.nomorAyat">
+              <span
+                class="ayat-chunk"
+                :class="isAyatActive(part.nomor, a.nomorAyat) && 'is-active'"
+                @click="toggleAyatDetail(part.nomor, a.nomorAyat)"
+              ><span x-text="a.teksArab"></span><span class="ayah-marker" x-text="a.nomorAyat"></span></span>
+            </template>
+          </div>
+        </div>
+      </template>
+    </section>
+
+    <!-- ================= Panel detail ayat (dipakai bersama halaman surah & juz) ================= -->
+    <template x-if="activeAyatData">
+      <div class="fixed inset-x-0 bottom-0 z-40 md:absolute md:static md:mb-8" x-transition>
+        <div class="max-w-4xl mx-auto md:px-0 px-3 pb-3 md:pb-0">
+          <div class="rounded-t-2xl md:rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-xl p-4 max-h-[60vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-sm font-display font-bold text-blue-600 dark:text-cyan-400" x-text="'QS ' + activeAyatData.surahNama + ' : ' + activeAyatData.ayat.nomorAyat"></span>
+              <button @click="activeAyat=null" class="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-center text-slate-400">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+
+            <p x-show="settings.showLatin" class="text-slate-500 dark:text-slate-400 italic mb-2" :class="latinSizeClass" x-text="activeAyatData.ayat.teksLatin"></p>
+            <p x-show="settings.showTerjemahan" class="text-slate-700 dark:text-slate-200 mb-3" :class="latinSizeClass" x-text="activeAyatData.ayat.teksIndonesia"></p>
+
+            <details class="mb-3 group">
+              <summary class="cursor-pointer text-sm font-semibold text-blue-600 dark:text-cyan-400 select-none">Tafsir Kemenag</summary>
+              <p class="text-sm text-slate-600 dark:text-slate-300 mt-2 leading-relaxed" x-text="activeAyatData.ayat.tafsir"></p>
+            </details>
+
+            <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100 dark:border-slate-700">
+              <button @click="playAyat(activeAyatData.surahNomor, activeAyatData.ayat.nomorAyat, activeAyatData.ayat.audio)" class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg bg-blue-600 dark:bg-cyan-500 text-white hover:opacity-90">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                Putar Audio
+              </button>
+              <button @click="toggleBookmark(activeAyatData.surahNomor, activeAyatData.surahNama, activeAyatData.ayat)" class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border" :class="isBookmarked(activeAyatData.surahNomor, activeAyatData.ayat.nomorAyat) ? 'bg-lime-500 dark:bg-green-500 text-white border-transparent' : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300'">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4h12v17l-6-4-6 4V4Z"/></svg>
+                <span x-text="isBookmarked(activeAyatData.surahNomor, activeAyatData.ayat.nomorAyat) ? 'Tersimpan' : 'Bookmark'"></span>
+              </button>
+              <button @click="markAsLastRead(activeAyatData.surahNomor, activeAyatData.surahNama, activeAyatData.ayat.nomorAyat)" class="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+                Tandai Terakhir Dibaca
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- ================= HALAMAN: BOOKMARK ================= -->
+    <section x-show="page==='bookmark'" x-cloak class="fade-in">
+      <h1 class="font-display font-bold text-2xl mb-5">Ayat Tersimpan</h1>
+      <div class="space-y-3">
+        <template x-for="b in bookmarks" :key="b.surahNomor + '-' + b.ayatNomor">
+          <div class="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/60 p-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-blue-50 dark:bg-cyan-500/10 text-blue-600 dark:text-cyan-400" x-text="'QS ' + b.surahNama + ' : ' + b.ayatNomor"></span>
+              <span class="text-xs text-slate-400" x-text="formatWaktu(b.waktu)"></span>
+            </div>
+            <p class="font-arabic text-2xl text-right mb-1" x-text="b.teksArab"></p>
+            <p class="text-sm italic text-slate-500 dark:text-slate-400 mb-3" x-text="b.teksLatin"></p>
+            <div class="flex gap-2">
+              <button @click="goTo('surah/' + b.surahNomor + '/' + b.ayatNomor)" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-blue-600 dark:bg-cyan-500 text-white">Buka Ayat</button>
+              <button @click="removeBookmark(b.surahNomor, b.ayatNomor)" class="text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 text-slate-500 dark:text-slate-300">Hapus</button>
+            </div>
+          </div>
+        </template>
+        <p x-show="bookmarks.length===0" class="text-center text-sm text-slate-400 py-12">Belum ada ayat yang disimpan. Buka sebuah ayat lalu tekan "Bookmark".</p>
+      </div>
+    </section>
+
+    <!-- ================= HALAMAN: PENGATURAN ================= -->
+    <section x-show="page==='settings'" x-cloak class="fade-in max-w-lg">
+      <h1 class="font-display font-bold text-2xl mb-6">Pengaturan</h1>
+
+      <div class="mb-6">
+        <p class="text-sm font-semibold mb-2">Tema Tampilan</p>
+        <div class="grid grid-cols-3 gap-2">
+          <button @click="setTheme('system')" class="py-2.5 rounded-xl border text-sm font-medium" :class="settings.theme==='system' ? 'bg-blue-600 dark:bg-cyan-500 text-white border-transparent' : 'border-slate-200 dark:border-slate-700'">Sistem</button>
+          <button @click="setTheme('light')" class="py-2.5 rounded-xl border text-sm font-medium" :class="settings.theme==='light' ? 'bg-blue-600 dark:bg-cyan-500 text-white border-transparent' : 'border-slate-200 dark:border-slate-700'">Terang</button>
+          <button @click="setTheme('dark')" class="py-2.5 rounded-xl border text-sm font-medium" :class="settings.theme==='dark' ? 'bg-blue-600 dark:bg-cyan-500 text-white border-transparent' : 'border-slate-200 dark:border-slate-700'">Gelap</button>
+        </div>
+      </div>
+
+      <div class="mb-6">
+        <p class="text-sm font-semibold mb-2">Ukuran Huruf Arab</p>
+        <div class="grid grid-cols-5 gap-2 mb-3">
+          <template x-for="lvl in [1,2,3,4,5]" :key="lvl">
+            <button @click="setFontSize(lvl)" class="py-2 rounded-xl border text-sm font-medium" :class="settings.fontSize===lvl ? 'bg-blue-600 dark:bg-cyan-500 text-white border-transparent' : 'border-slate-200 dark:border-slate-700'" x-text="lvl"></button>
+          </template>
+        </div>
+        <p class="font-arabic text-center rounded-xl bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 py-4" :class="arabicSizeClass">بِسْمِ اللَّهِ</p>
+      </div>
+
+      <div class="mb-6">
+        <p class="text-sm font-semibold mb-2">Qari (Suara Murottal)</p>
+        <select x-model="settings.qari" class="w-full py-2.5 px-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm">
+          <template x-for="q in qariList" :key="q.code">
+            <option :value="q.code" x-text="q.name"></option>
+          </template>
+        </select>
+      </div>
+
+      <div class="mb-6 space-y-3">
+        <p class="text-sm font-semibold mb-1">Tampilan Detail Ayat</p>
+        <label class="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3">
+          <span class="text-sm">Tampilkan teks latin</span>
+          <input type="checkbox" x-model="settings.showLatin" class="w-5 h-5 accent-blue-600 dark:accent-cyan-500" />
+        </label>
+        <label class="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3">
+          <span class="text-sm">Tampilkan terjemahan</span>
+          <input type="checkbox" x-model="settings.showTerjemahan" class="w-5 h-5 accent-blue-600 dark:accent-cyan-500" />
+        </label>
+      </div>
+
+      <button
+        x-show="deferredInstallPrompt"
+        @click="installApp()"
+        class="w-full mb-6 py-3 rounded-xl bg-lime-500 dark:bg-green-500 text-white font-semibold text-sm"
+        style="display:none"
+      >
+        Pasang Ayatify sebagai Aplikasi
+      </button>
+
+      <button @click="goTo('tentang')" class="text-sm text-blue-600 dark:text-cyan-400 font-semibold">Tentang Ayatify →</button>
+    </section>
+
+    <!-- ================= HALAMAN: TENTANG ================= -->
+    <section x-show="page==='about'" x-cloak class="fade-in max-w-lg text-sm text-slate-600 dark:text-slate-300 leading-relaxed space-y-3">
+      <h1 class="font-display font-bold text-2xl text-slate-800 dark:text-slate-100 mb-3">Tentang Ayatify</h1>
+      <p>Ayatify adalah platform baca Al-Qur'an online yang ringan, responsif, dan dapat dipasang sebagai aplikasi di ponsel maupun desktop.</p>
+      <p>Teks Arab, transliterasi latin, terjemahan Kemenag, tafsir, dan audio murottal disediakan oleh API publik <strong>EQuran.id</strong>. Ayatify tidak menyimpan data Al-Qur'an sendiri — semua diambil langsung dari API tersebut.</p>
+      <p>Data pribadi kamu (bookmark, terakhir dibaca, dan pengaturan) hanya disimpan di perangkatmu sendiri lewat localStorage browser, tidak dikirim ke server mana pun.</p>
+      <p class="text-xs text-slate-400">Fitur jadwal sholat masih dalam pengembangan dan akan hadir pada pembaruan berikutnya.</p>
+      <button @click="goTo('pengaturan')" class="text-blue-600 dark:text-cyan-400 font-semibold">← Kembali ke Pengaturan</button>
+    </section>
+  </main>
+
+  <!-- ============ Navigasi bawah (mobile) ============ -->
+  <nav class="md:hidden fixed bottom-0 inset-x-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur border-t border-slate-200 dark:border-slate-800 pb-[env(safe-area-inset-bottom)]">
+    <div class="grid grid-cols-4">
+      <button @click="goTo('')" class="flex flex-col items-center gap-0.5 py-2.5 text-xs" :class="page==='home' ? 'text-blue-600 dark:text-cyan-400' : 'text-slate-400'">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1V10Z"/></svg>
+        Beranda
+      </button>
+      <button @click="goTo('bookmark')" class="flex flex-col items-center gap-0.5 py-2.5 text-xs" :class="page==='bookmark' ? 'text-blue-600 dark:text-cyan-400' : 'text-slate-400'">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4h12v17l-6-4-6 4V4Z"/></svg>
+        Bookmark
+      </button>
+      <button @click="showToast('Fitur jadwal sholat sedang dalam pengembangan, segera hadir!')" class="flex flex-col items-center gap-0.5 py-2.5 text-xs text-slate-300 dark:text-slate-600">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 1 1 8 0v3"/></svg>
+        Sholat
+      </button>
+      <button @click="goTo('pengaturan')" class="flex flex-col items-center gap-0.5 py-2.5 text-xs" :class="page==='settings' ? 'text-blue-600 dark:text-cyan-400' : 'text-slate-400'">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+        Atur
+      </button>
+    </div>
+  </nav>
+
+  <!-- ============ Pemutar audio mengambang ============ -->
+  <div
+    x-show="audio.key"
+    x-transition
+    class="fixed left-0 right-0 z-40 bottom-16 md:bottom-4 px-3"
+    style="display:none"
+  >
+    <div class="max-w-md mx-auto rounded-2xl bg-slate-900 dark:bg-slate-800 text-white shadow-xl px-4 py-3 flex items-center gap-3 border border-slate-700">
+      <button @click="audio.playing ? $refs.audioPlayer.pause() : $refs.audioPlayer.play()" class="w-10 h-10 rounded-full bg-lime-500 dark:bg-green-500 flex items-center justify-center shrink-0">
+        <svg x-show="!audio.playing" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 ml-0.5" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        <svg x-show="audio.playing" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+      </button>
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-semibold truncate" x-text="audio.label"></p>
+        <p class="text-xs text-slate-400" x-text="qariName(settings.qari)"></p>
+      </div>
+      <button @click="stopAudio()" class="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center shrink-0">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+  </div>
+  <audio x-ref="audioPlayer" @playing="onAudioPlaying()" @pause="onAudioPause()" @ended="onAudioEnded()" class="hidden"></audio>
+
+  <!-- ============ Toast ============ -->
+  <div
+    x-show="toast"
+    x-transition
+    class="fixed bottom-32 md:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 dark:bg-slate-700 text-white text-sm px-4 py-2.5 rounded-full shadow-lg"
+    style="display:none"
+    x-text="toast"
+  ></div>
+</body>
+</html>
