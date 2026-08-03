@@ -2,7 +2,7 @@
 
 Web responsif untuk membaca Al-Qur'an: teks Arab mode **mushaf**, transliterasi
 latin, terjemahan Kemenag, tafsir per-ayat, audio murottal (5 pilihan qari),
-navigasi per Surah & per Juz, bookmark, dan "terakhir dibaca" hingga semuanya
+navigasi per Surah & per Juz, bookmark, dan **terakhir dibaca** hingga semuanya
 tersimpan di perangkat pengguna (localStorage), **tanpa database/backend**.
 
 ## Stack
